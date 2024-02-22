@@ -1,0 +1,233 @@
+---
+title: "Cluster Analysis"
+author: "Bronson Bagwell"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+# Packages Needed
+```{r,message=FALSE, warning= FALSE}
+library(tidyverse)
+library(caret)
+#install.packages(ROCR)
+library(ROCR)
+library(glmnet)
+library(party)
+library(randomForest)
+library(neuralnet)
+library(cluster)
+library(factoextra)
+library(NbClust)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## 1. Read the data into R and standardize. (1 pts)
+
+```{r,echo=TRUE}
+
+### Part I) i) Read the data of GraduateAdmission.csv file ######
+data <- read.csv("Wine.csv")
+#names(data) # gives names of the features (Variables)
+#summary(data)
+data1 <- data[-1]
+
+#str(wine)
+normdata <- scale(data1) # standardize
+#distance <- dist(data1) # Euclidean Distance
+#print(distance,digits=3) # Distances rounded to 3 decimal places
+
+
+#For neural net only
+#normalize <- function(x){
+#  return((x-min(x))/max(x)-min(x))
+#normdata <- as.data.frame(lapply(data1, normalize))
+#str(normadata)
+#summary(normdata)
+#Type <- winedata$Type
+#normdata <-cbind(Type, normdata)
+#str(normdata)
+#}
+```
+
+## 2. Use Non-hierarchical (K-means) cluster with 2 clusters and 10 random initial points (nstart=10) to find the clusters. Use set.seed(7332.01) for reproducibility. (2.5 pts)
+
+```{r,echo=TRUE}
+set.seed(7332.01)  # K means algortihm uses a random set of intial points 
+kmc2 <- kmeans(normdata,center=2,nstart = 10) # Kmeans with 2 cluster repeated with 10 different random intial points
+kmc2 # prints clusters and others, the higher cluster sum of sqs by cluster value is, the greater the quality of the clustering
+print(kmc2$cluster)
+```
+## 3. Determine the number of clusters using Silhouette and Nbclust Methods? (2.5 pts)
+
+
+```{r,echo=TRUE}
+## Elbow Method ##
+#fviz_nbclust(normdata,kmeans,method = "wss")+ 
+  #theme(plot.title=element_text(hjust = 0.5)) ## Elbow method to select # cluster sample
+
+### Part II vi) Silhouette Method ###
+## Silhouette Method ##
+
+fviz_nbclust(normdata,kmeans,method="silhouette")+
+  labs(subtitle = "Silhouette Method")+
+  theme(plot.title=element_text(hjust = 0.5)) 
+
+### Part II vii) NbClust() Method ##
+nbclustm<- NbClust(data=normdata,min.nc = 2, max.nc = 5, distance="euclidean",method="kmeans")
+
+
+```
+Both Silhouette and Nbclust Methods suggest 3 as the optimal number of clusters.
+
+## 4. Fit K-means cluster with10 random initial points (nstart=10) using the optimal number of clusters identified in question #3. Use set.seed(7332.01) (2.5 pts)
+## 5. Graph the silhouette plot for the clusters you found in question #4. Describe the graph? (2 pts)
+
+```{r,echo=TRUE}
+set.seed(7332.01)
+kmc3f <-kmeans(normdata,3,nstart=10)
+
+silht <- silhouette(kmc3f$cluster,dist(normdata))
+fviz_silhouette(silht)  # silhouette plot shows visual inspection how well the observations are grouped
+
+```
+
+Each bar represents an observation. Cluster 1 is the healthiest cluster because it has the highest % of the observations that are above the average width of 0.28 (red dotted line), and the least total volume below the average.  Cluster 2 is the next healthiest cluster with a large portion of the observations above the average width. Cluster 3 is not as healthy and actually contains some observations that are below 0 meaning that perhaps those are in the wrong cluster. 
+
+## 6. Plot the clusters you found in question #4 using the first two principal components? What percentage of the variability is explained by the first two components? (2 pts)
+
+```{r,echo=TRUE}
+####Cluster Plot  ######
+par(mfrow=c(1,1)) 
+clusplot(normdata,kmc3f$cluster,color=TRUE,shade=TRUE,labels=2,line=0,main = "Visual Inspection")
+
+
+kmsclust <- data.frame(normdata,cluster=as.factor(kmc3f$cluster)) # adding cluster column into the data 
+head(kmsclust)
+```
+
+55.41% of the variability is explained by the first 2 components.
+
+## 7. Perform Hierarchical Clustering Analysis (HCA). (2.5 pts)
+## 8. Plot the dendrogram with Type labels. Describe what you see. (2 pts)
+```{r,echo=TRUE}
+#distance <- dist(data) if data has different measurements, must standardize then use measurements or higher measurement values will dominate
+hierclust <- hclust(dist(normdata)) # hierarchical clustering
+#plot(hierclust)  # Dendrogram plot. Complet measures maximum distance (default). Height on y axis is linkage criteria.
+plot(hierclust, labels=data$Type) # Dendrogram with labels
+
+```
+
+Branches of the same height are more similar to each other. We see roughly 3 groupings - A's are clustered more at the beginning, C's are mostly in the middle, and B's are found toward the right. The overall height is around 11. The heights of the arms vary - the left branch has a height of approximately 9 while the right side branch has a height of approximately 9.75. 
+
+## 9. Based your answer to the previous question #8, where do you think we should cut the dendrogram in order to obtain the optimal clusters? (2 pts)
+
+```{r,echo=TRUE}
+plot(hierclust, labels=data1$Type,hang=-1) # Dendrogram with labels
+abline(h=9.4,col="red")
+
+#Hierarchical Clustering optimal number of clusters look for a large drop  #
+#barplot(hierclust$height,names.arg = (nrow(data1)-1):1) # shows barplots and in hierarchical clustering
+                                                        # this plot allows you to choose the optimal clusters.
+                                                        # Look for a large drop in the height of the bar
+```
+I choose to cut the dendrogram at 9.4 because this results in approximately 3 clusters as found in the previous question. 
+
+## 10. Using your answer to question #9, plot the dendrogram and box the clusters (2 pts)
+
+```{r,echo=TRUE}
+plot(hierclust, labels=data1$Term) # Dendrogram with labels
+abline(h=9.4, col="red") # cutting the height at height 9.4 results in 3 clusters
+rect.hclust(hierclust,k=3,border="red")  # Boxing the clusters D
+```
+
+## 11. Does the clustering you found using K-means method in question #4 agree with the Type variable in the data? If yes, what’s the percentage of agreement? (1.5 pts)
+
+```{r,echo=TRUE}
+
+kmsclust <- data.frame(data,cluster=as.factor(kmc3f$cluster)) # adding cluster column into the data
+
+#head(kmsclust)
+
+ 
+
+```
+
+```{r, echo=TRUE}
+
+#table(kmsclust$cluster,kmsclust$Type)
+
+#cbind(tsdata$Species,pred.nn)  ## to see type and the highest predicted to be able to tell which type connects to which predicted
+
+kmsclust$cluster <-gsub(1,"C",kmsclust$cluster) # Replacing 1 with A
+
+kmsclust$cluster <-gsub(2,"A",kmsclust$cluster) # Replacing 2 with B 
+
+kmsclust$cluster <-gsub(3,"B",kmsclust$cluster) # Replacing 3 with C 
+
+#kmsclust$cluster
+
+ 
+
+### convert to factors need if one wants to use confusionMatrix function for model performace
+
+test_predictionkms <-as.factor(kmsclust$clust) # Predicted Classes
+
+test_actualkms <- as.factor(kmsclust$Type)    # Actual Classes
+
+ 
+
+conf_matkms <- table(test_predictionkms,test_actualkms) # Confusion Matrix
+#conf_mat
+
+#test_hcacc <- sum(diag(conf_mat))/sum(conf_mat )  # Overall accuracy
+#test_hcacc # Overall accuracy
+#test_erhca <- 1-test_hcacc  # Misclassification Error
+#test_erhca  # Misclassification Error
+
+confusionMatrix(test_predictionkms,test_actualkms)  # or confusionMatrix(conf_mat)
+```
+Yes, for the K-means cluster, it has a 96.63% accuracy or percent of agreement.
+
+## 12. Does the final clustering you found using HCA method agree with the Type variable in the data? If yes, what’s the percentage of agreement? (1.5 pts)
+
+```{r,echo=TRUE}
+group <- cutree(hierclust, 3) #will pull out groupings
+hiercluster <- data.frame(data,group) # adding cluster column into the data 
+#head(hiercluster)
+
+#table(kmsclust$cluster,kmsclust$Type)
+
+#cbind(tsdata$Species,pred.nn)  ## to see type and the highest predicted to be able to tell which type connects to which predicted
+
+hiercluster$group <-gsub(1,"A",hiercluster$group) # Replacing 1 with A
+
+hiercluster$group <-gsub(2,"B",hiercluster$group) # Replacing 2 with B 
+
+hiercluster$group <-gsub(3,"C",hiercluster$group) # Replacing 3 with C
+#kmsclust$cluster
+
+ 
+
+### convert to factors need if one wants to use confusionMatrix function for model performace
+
+test_predictionhca <-as.factor(hiercluster$group) # Predicted Classes
+
+test_actualhca <- as.factor(hiercluster$Type)    # Actual Classes
+
+ 
+
+conf_mathca <- table(test_predictionhca,test_actualhca) # Confusion Matrix
+#conf_mat
+
+#test_hcacc <- sum(diag(conf_mat))/sum(conf_mat )  # Overall accuracy
+#test_hcacc # Overall accuracy
+#test_erhca <- 1-test_hcacc  # Misclassification Error
+#test_erhca  # Misclassification Error
+
+confusionMatrix(test_predictionhca,test_actualhca)  # or confusionMatrix(conf_mat)
+```
+
+Yes, for the HCA cluster, it has a 83.71% accuracy or percent of agreement.
