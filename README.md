@@ -11,7 +11,7 @@ This project applies unsupervised clustering techniques to the Wine dataset to d
 ## Methods
 - K-Means clustering with k = 2, 3, and 4 clusters
 - Hierarchical clustering with complete, average, and single linkage
-- Elbow method and silhouette analysis for optimal cluster selection
+- Silhouette analysis for optimal cluster selection
 - NbClust package for comprehensive cluster validation across multiple indices
 
 ## Key Findings
