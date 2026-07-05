@@ -38,18 +38,6 @@ data1 <- data[-1]
 normdata <- scale(data1) # standardize
 #distance <- dist(data1) # Euclidean Distance
 #print(distance,digits=3) # Distances rounded to 3 decimal places
-
-
-#For neural net only
-#normalize <- function(x){
-#  return((x-min(x))/max(x)-min(x))
-#normdata <- as.data.frame(lapply(data1, normalize))
-#str(normadata)
-#summary(normdata)
-#Type <- winedata$Type
-#normdata <-cbind(Type, normdata)
-#str(normdata)
-#}
 ```
 
 ## 2. Use Non-hierarchical (K-means) cluster with 2 clusters and 10 random initial points (nstart=10) to find the clusters. Use set.seed(7332.01) for reproducibility. (2.5 pts)
@@ -157,37 +145,13 @@ kmsclust <- data.frame(data,cluster=as.factor(kmc3f$cluster)) # adding cluster c
 
 ```{r, echo=TRUE}
 
-#table(kmsclust$cluster,kmsclust$Type)
+# Map each cluster to the Type label it contains most often (majority vote),
+# then compare the mapped labels against the actual Type variable.
 
-#cbind(tsdata$Species,pred.nn)  ## to see type and the highest predicted to be able to tell which type connects to which predicted
-
-kmsclust$cluster <-gsub(1,"C",kmsclust$cluster) # Replacing 1 with A
-
-kmsclust$cluster <-gsub(2,"A",kmsclust$cluster) # Replacing 2 with B 
-
-kmsclust$cluster <-gsub(3,"B",kmsclust$cluster) # Replacing 3 with C 
-
-#kmsclust$cluster
-
- 
-
-### convert to factors need if one wants to use confusionMatrix function for model performace
-
-test_predictionkms <-as.factor(kmsclust$clust) # Predicted Classes
-
-test_actualkms <- as.factor(kmsclust$Type)    # Actual Classes
-
- 
-
-conf_matkms <- table(test_predictionkms,test_actualkms) # Confusion Matrix
-#conf_mat
-
-#test_hcacc <- sum(diag(conf_mat))/sum(conf_mat )  # Overall accuracy
-#test_hcacc # Overall accuracy
-#test_erhca <- 1-test_hcacc  # Misclassification Error
-#test_erhca  # Misclassification Error
-
-confusionMatrix(test_predictionkms,test_actualkms)  # or confusionMatrix(conf_mat)
+kmap <- sapply(sort(unique(kmc3f$cluster)), function(k)
+          names(which.max(table(data$Type[kmc3f$cluster == k]))))
+km_pred <- factor(kmap[kmc3f$cluster], levels = levels(factor(data$Type)))
+confusionMatrix(km_pred, factor(data$Type))
 ```
 Yes, for the K-means cluster, it has a 96.63% accuracy or percent of agreement.
 
@@ -195,39 +159,14 @@ Yes, for the K-means cluster, it has a 96.63% accuracy or percent of agreement.
 
 ```{r,echo=TRUE}
 group <- cutree(hierclust, 3) #will pull out groupings
-hiercluster <- data.frame(data,group) # adding cluster column into the data 
-#head(hiercluster)
 
-#table(kmsclust$cluster,kmsclust$Type)
+# Map each HCA group to the Type label it contains most often (majority vote),
+# then compare the mapped labels against the actual Type variable.
 
-#cbind(tsdata$Species,pred.nn)  ## to see type and the highest predicted to be able to tell which type connects to which predicted
-
-hiercluster$group <-gsub(1,"A",hiercluster$group) # Replacing 1 with A
-
-hiercluster$group <-gsub(2,"B",hiercluster$group) # Replacing 2 with B 
-
-hiercluster$group <-gsub(3,"C",hiercluster$group) # Replacing 3 with C
-#kmsclust$cluster
-
- 
-
-### convert to factors need if one wants to use confusionMatrix function for model performace
-
-test_predictionhca <-as.factor(hiercluster$group) # Predicted Classes
-
-test_actualhca <- as.factor(hiercluster$Type)    # Actual Classes
-
- 
-
-conf_mathca <- table(test_predictionhca,test_actualhca) # Confusion Matrix
-#conf_mat
-
-#test_hcacc <- sum(diag(conf_mat))/sum(conf_mat )  # Overall accuracy
-#test_hcacc # Overall accuracy
-#test_erhca <- 1-test_hcacc  # Misclassification Error
-#test_erhca  # Misclassification Error
-
-confusionMatrix(test_predictionhca,test_actualhca)  # or confusionMatrix(conf_mat)
+hmap <- sapply(sort(unique(group)), function(k)
+          names(which.max(table(data$Type[group == k]))))
+hca_pred <- factor(hmap[group], levels = levels(factor(data$Type)))
+confusionMatrix(hca_pred, factor(data$Type))
 ```
 
 Yes, for the HCA cluster, it has a 83.71% accuracy or percent of agreement.
