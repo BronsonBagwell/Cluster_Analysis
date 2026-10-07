@@ -7,14 +7,7 @@ output: html_document
 
 # Packages Needed
 ```{r,message=FALSE, warning= FALSE}
-library(tidyverse)
 library(caret)
-#install.packages(ROCR)
-library(ROCR)
-library(glmnet)
-library(party)
-library(randomForest)
-library(neuralnet)
 library(cluster)
 library(factoextra)
 library(NbClust)
@@ -28,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 
-### Part I) i) Read the data of GraduateAdmission.csv file ######
+### Part I) i) Read the data of Wine.csv file ######
 data <- read.csv("Wine.csv")
 #names(data) # gives names of the features (Variables)
 #summary(data)
@@ -45,7 +38,7 @@ normdata <- scale(data1) # standardize
 ```{r}
 set.seed(7332.01)  # K means algortihm uses a random set of intial points 
 kmc2 <- kmeans(normdata,center=2,nstart = 10) # Kmeans with 2 cluster repeated with 10 different random intial points
-kmc2 # prints clusters and others, the higher cluster sum of sqs by cluster value is, the greater the quality of the clustering
+kmc2 # prints clusters and others, the higher the between_SS / total_SS ratio is, the better the clusters are separated
 print(kmc2$cluster)
 ```
 ## 3. Determine the number of clusters using Silhouette and Nbclust Methods? (2.5 pts)
@@ -113,7 +106,7 @@ Branches of the same height are more similar to each other. We see roughly 3 gro
 ## 9. Based your answer to the previous question #8, where do you think we should cut the dendrogram in order to obtain the optimal clusters? (2 pts)
 
 ```{r}
-plot(hierclust, labels=data1$Type,hang=-1) # Dendrogram with labels
+plot(hierclust, labels=data$Type,hang=-1) # Dendrogram with labels
 abline(h=9.4,col="red")
 
 #Hierarchical Clustering optimal number of clusters look for a large drop  #
@@ -121,12 +114,12 @@ abline(h=9.4,col="red")
                                                         # this plot allows you to choose the optimal clusters.
                                                         # Look for a large drop in the height of the bar
 ```
-I choose to cut the dendrogram at 9.4 because this results in approximately 3 clusters as found in the previous question. 
+I choose to cut the dendrogram at 9.4 because this results in 3 clusters as found in the previous question. 
 
 ## 10. Using your answer to question #9, plot the dendrogram and box the clusters (2 pts)
 
 ```{r}
-plot(hierclust, labels=data1$Term) # Dendrogram with labels
+plot(hierclust, labels=data$Type) # Dendrogram with labels
 abline(h=9.4, col="red") # cutting the height at height 9.4 results in 3 clusters
 rect.hclust(hierclust,k=3,border="red")  # Boxing the clusters D
 ```
